@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GitHub Folder Uploader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; overscroll-behavior: none; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .file-item { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .upload-progress { transition: width 0.3s ease; }
+        .pulse-dot { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading-spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input, button { font-size: 16px !important; }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-white">
+    <div class="container mx-auto px-4 py-6 max-w-lg pb-20">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-bg mb-4">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold">GitHub Uploader</h1>
+            <p class="text-gray-400 text-sm mt-1">Загрузка папок на GitHub с Android</p>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings-section" class="bg-gray-800 rounded-2xl p-5 mb-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-semibold flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Настройки
+                </h2>
+                <button id="toggle-settings" class="text-gray-400 text-sm">Свернуть</button>
+            </div>
+            
+            <div id="settings-content" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">GitHub Token *</label>
+                    <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx" 
+                        class="w-full bg-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Владелец *</label>
+                        <input type="text" id="repo-owner" placeholder="username" 
+                            class="w-full bg-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Репозиторий *</label>
+                        <input type="text" id="repo-name" placeholder="my-repo" 
+                            class="w-full bg-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Ветка</label>
+                        <input type="text" id="branch-name" placeholder="main" value="main"
+                            class="w-full bg-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Путь</label>
+                        <input type="text" id="base-path" placeholder="src/" 
+                            class="w-full bg-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Сообщение коммита</label>
+                    <input type="text" id="commit-message" placeholder="Upload files" value="Upload via Android"
+                        class="w-full bg-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+
+                <button id="save-settings" class="w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 rounded-xl py-3 font-medium transition-colors">
+                    Сохранить настройки
+                </button>
+            </div>
+        </div>
+
+        <!-- File Selection -->
+        <div class="bg-gray-800 rounded-2xl p-5 mb-4">
+            <h2 class="font-semibold mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+                Выбор файлов
+            </h2>
+            
+            <div class="space-y-3">
+                <!-- Folder picker button -->
+                <button id="pick-folder-btn" class="w-full border-2 border-dashed border-gray-600 rounded-xl py-8 text-center hover:border-purple-500 active:border-purple-400 active:bg-gray-700/50 transition-colors">
+                    <svg class="w-12 h-12 mx-auto text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    <p class="text-gray-400 font-medium">Выбрать папку</p>
+                    <p class="text-xs text-gray-500 mt-1">Загрузится вся структура</p>
+                </button>
+                
+                <!-- Files picker button -->
+                <button id="pick-files-btn" class="w-full border-2 border-dashed border-gray-600 rounded-xl py-6 text-center hover:border-blue-500 active:border-blue-400 active:bg-gray-700/50 transition-colors">
+                    <svg class="w-10 h-10 mx-auto text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p class="text-gray-400">Или выбрать файлы</p>
+                </button>
+                
+                <!-- Hidden file input for fallback -->
+                <input type="file" id="files-input" multiple class="hidden">
+            </div>
+        </div>
+
+        <!-- Selected Files -->
+        <div id="files-section" class="bg-gray-800 rounded-2xl p-5 mb-4 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-semibold flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    Файлы (<span id="file-count">0</span>)
+                </h2>
+                <button id="clear-files" class="text-red-400 text-sm hover:text-red-300 active:text-red-200">Очистить</button>
+            </div>
+            
+            <div id="files-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <p class="text-sm text-gray-400">Общий размер: <span id="total-size" class="text-white font-medium">0 KB</span></p>
+            </div>
+        </div>
+
+        <!-- Upload Button -->
+        <button id="upload-btn" disabled class="w-full gradient-bg rounded-2xl py-4 font-semibold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
+            <span id="upload-text" class="flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Загрузить на GitHub
+            </span>
+        </button>
+
+        <!-- Progress Section -->
+        <div id="progress-section" class="bg-gray-800 rounded-2xl p-5 mt-4 hidden">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-semibold flex items-center">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 pulse-dot"></span>
+                    Загрузка...
+                </h2>
+                <span id="progress-percent" class="text-purple-400 font-medium">0%</span>
+            </div>
+            
+            <div class="w-full bg-gray-700 rounded-full h-3 mb-3">
+                <div id="progress-bar" class="upload-progress bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full" style="width: 0%"></div>
+            </div>
+            
+            <p id="progress-status" class="text-sm text-gray-400 truncate">Подготовка...</p>
+            
+            <div id="upload-log" class="mt-4 max-h-32 overflow-y-auto text-xs space-y-1 bg-gray-900 rounded-lg p-3"></div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="bg-gray-800 rounded-2xl p-5 mt-4 hidden">
+            <div id="result-icon" class="text-center mb-4"></div>
+            <h2 id="result-title" class="text-xl font-bold text-center mb-2"></h2>
+            <p id="result-message" class="text-gray-400 text-center text-sm"></p>
+            <a id="result-link" href="#" target="_blank" class="block mt-4 text-center bg-gray-700 rounded-xl py-3 text-purple-400 hover:bg-gray-600 active:bg-gray-500 hidden">
+                Открыть репозиторий →
+            </a>
+            <button id="new-upload-btn" class="w-full mt-3 bg-gray-700 rounded-xl py-3 text-gray-300 hover:bg-gray-600 active:bg-gray-500">
+                Новая загрузка
+            </button>
+        </div>
+
+        <!-- Instructions (collapsed by default) -->
+        <details class="mt-6 bg-gray-800/50 rounded-2xl">
+            <summary class="p-5 cursor-pointer font-semibold text-yellow-400 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Как получить токен
+            </summary>
+            <div class="px-5 pb-5">
+                <ol class="text-sm text-gray-400 space-y-2 list-decimal list-inside">
+                    <li>Откройте <a href="https://github.com/settings/tokens" class="text-purple-400 underline">GitHub Settings</a></li>
+                    <li>Personal access tokens → Tokens (classic)</li>
+                    <li>Generate new token (classic)</li>
+                    <li>Выберите scope: <code class="bg-gray-700 px-1 rounded">repo</code></li>
+                    <li>Скопируйте токен и вставьте выше</li>
+                </ol>
+            </div>
+        </details>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let settings = {
+            token: '',
+            owner: '',
+            repo: '',
+            branch: 'main',
+            basePath: '',
+            commitMessage: 'Upload via Android'
+        };
+
+        const pickFolderBtn = document.getElementById('pick-folder-btn');
+        const pickFilesBtn = document.getElementById('pick-files-btn');
+        const filesInput = document.getElementById('files-input');
+        const filesSection = document.getElementById('files-section');
+        const filesList = document.getElementById('files-list');
+        const fileCount = document.getElementById('file-count');
+        const totalSize = document.getElementById('total-size');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadText = document.getElementById('upload-text');
+        const progressSection = document.getElementById('progress-section');
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressStatus = document.getElementById('progress-status');
+        const uploadLog = document.getElementById('upload-log');
+        const resultSection = document.getElementById('result-section');
+
+        window.receiveAndroidFiles = function(filesData) {
+            console.log('Received files from Android:', filesData.length);
+            selectedFiles = filesData.map(f => ({
+                path: f.path,
+                name: f.name,
+                size: f.size,
+                content: f.content,
+                type: f.type,
+                isBase64: true
+            }));
+            updateFilesUI();
+            showToast(`Выбрано ${selectedFiles.length} файлов`);
+        };
+
+        document.getElementById('toggle-settings').addEventListener('click', function() {
+            const content = document.getElementById('settings-content');
+            content.classList.toggle('hidden');
+            this.textContent = content.classList.contains('hidden') ? 'Развернуть' : 'Свернуть';
+        });
+
+        function loadSettings() {
+            const saved = localStorage.getItem('github-uploader-settings');
+            if (saved) {
+                settings = { ...settings, ...JSON.parse(saved) };
+                document.getElementById('github-token').value = settings.token;
+                document.getElementById('repo-owner').value = settings.owner;
+                document.getElementById('repo-name').value = settings.repo;
+                document.getElementById('branch-name').value = settings.branch;
+                document.getElementById('base-path').value = settings.basePath;
+                document.getElementById('commit-message').value = settings.commitMessage;
+                
+                if (settings.token && settings.owner && settings.repo) {
+                    document.getElementById('settings-content').classList.add('hidden');
+                    document.getElementById('toggle-settings').textContent = 'Развернуть';
+                }
+            }
+        }
+
+        document.getElementById('save-settings').addEventListener('click', () => {
+            settings.token = document.getElementById('github-token').value.trim();
+            settings.owner = document.getElementById('repo-owner').value.trim();
+            settings.repo = document.getElementById('repo-name').value.trim();
+            settings.branch = document.getElementById('branch-name').value.trim() || 'main';
+            settings.basePath = document.getElementById('base-path').value.trim();
+            settings.commitMessage = document.getElementById('commit-message').value.trim() || 'Upload files';
+            
+            localStorage.setItem('github-uploader-settings', JSON.stringify(settings));
+            showToast('Настройки сохранены!');
+            updateUploadButton();
+            
+            document.getElementById('settings-content').classList.add('hidden');
+            document.getElementById('toggle-settings').textContent = 'Развернуть';
+        });
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg z-50';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        pickFolderBtn.addEventListener('click', () => {
+            if (typeof AndroidBridge !== 'undefined') {
+                AndroidBridge.pickFolder();
+            } else {
+                showToast('Запустите в Android приложении');
+            }
+        });
+
+        pickFilesBtn.addEventListener('click', () => {
+            if (typeof AndroidBridge !== 'undefined') {
+                filesInput.click();
+            } else {
+                filesInput.click();
+            }
+        });
+
+        filesInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            showToast('Обработка файлов...');
+            
+            for (const file of files) {
+                const content = await fileToBase64(file);
+                selectedFiles.push({
+                    path: file.name,
+                    name: file.name,
+                    size: file.size,
+                    content: content,
+                    type: file.type,
+                    isBase64: true
+                });
+            }
+            
+            updateFilesUI();
+        });
+
+        function updateFilesUI() {
+            if (selectedFiles.length === 0) {
+                filesSection.classList.add('hidden');
+                return;
+            }
+            
+            filesSection.classList.remove('hidden');
+            fileCount.textContent = selectedFiles.length;
+            
+            const total = selectedFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+            totalSize.textContent = formatSize(total);
+            
+            filesList.innerHTML = selectedFiles.slice(0, 50).map((f, i) => `
+                <div class="file-item flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2">
+                    <div class="flex items-center min-w-0 flex-1">
+                        <svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span class="text-sm truncate">${f.path}</span>
+                    </div>
+                    <div class="flex items-center ml-2">
+                        <span class="text-xs text-gray-500 mr-2">${formatSize(f.size || 0)}</span>
+                        <button onclick="removeFile(${i})" class="text-red-400 hover:text-red-300 p-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (selectedFiles.length > 50) {
+                filesList.innerHTML += `<div class="text-center text-gray-500 text-sm py-2">...и ещё ${selectedFiles.length - 50} файлов</div>`;
+            }
+            
+            updateUploadButton();
+        }
+
+        window.removeFile = function(index) {
+            selectedFiles.splice(index, 1);
+            updateFilesUI();
+        };
+
+        document.getElementById('clear-files').addEventListener('click', () => {
+            selectedFiles = [];
+            filesInput.value = '';
+            updateFilesUI();
+        });
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function updateUploadButton() {
+            const canUpload = selectedFiles.length > 0 && 
+                              settings.token && 
+                              settings.owner && 
+                              settings.repo;
+            uploadBtn.disabled = !canUpload;
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function addLog(message, type = 'info') {
+            const colors = {
+                info: 'text-gray-400',
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400'
+            };
+            
+            const entry = document.createElement('div');
+            entry.className = colors[type];
+            entry.textContent = message;
+            uploadLog.appendChild(entry);
+            uploadLog.scrollTop = uploadLog.scrollHeight;
+        }
+
+        async function getFileSha(path) {
+            try {
+                const response = await fetch(
+                    `https://api.github.com/repos/${settings.owner}/${settings.repo}/contents/${path}?ref=${settings.branch}`,
+                    {
+                        headers: {
+                            'Authorization': `token ${settings.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.sha;
+                }
+                return null;
+            } catch {
+                return null;
+            }
+        }
+
+        async function uploadFile(fileData, index, total) {
+            let path = fileData.path;
+            
+            if (settings.basePath) {
+                path = settings.basePath.replace(/^\/|\/$/g, '') + '/' + path;
+            }
+            
+            const content = fileData.content;
+            
+            const sha = await getFileSha(path);
+            
+            const body = {
+                message: `${settings.commitMessage} (${index + 1}/${total})`,
+                content: content,
+                branch: settings.branch
+            };
+            
+            if (sha) {
+                body.sha = sha;
+            }
+            
+            const response = await fetch(
+                `https://api.github.com/repos/${settings.owner}/${settings.repo}/contents/${path}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${settings.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Upload failed');
+            }
+            
+            return await response.json();
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            settings.token = document.getElementById('github-token').value.trim();
+            settings.owner = document.getElementById('repo-owner').value.trim();
+            settings.repo = document.getElementById('repo-name').value.trim();
+            settings.branch = document.getElementById('branch-name').value.trim() || 'main';
+            settings.basePath = document.getElementById('base-path').value.trim();
+            settings.commitMessage = document.getElementById('commit-message').value.trim() || 'Upload files';
+            
+            if (!settings.token || !settings.owner || !settings.repo) {
+                showToast('Заполните все настройки!');
+                return;
+            }
+            
+            progressSection.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+            uploadLog.innerHTML = '';
+            uploadBtn.disabled = true;
+            uploadText.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+            
+            let uploaded = 0;
+            let failed = 0;
+            const total = selectedFiles.length;
+            
+            addLog(`Начинаем загрузку ${total} файлов...`);
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const fileData = selectedFiles[i];
+                
+                try {
+                    const shortPath = fileData.path.length > 40 
+                        ? '...' + fileData.path.slice(-37) 
+                        : fileData.path;
+                    progressStatus.textContent = `Загрузка: ${shortPath}`;
+                    
+                    await uploadFile(fileData, i, total);
+                    
+                    uploaded++;
+                    addLog(`✓ ${fileData.name}`, 'success');
+                } catch (error) {
+                    failed++;
+                    addLog(`✗ ${fileData.name}: ${error.message}`, 'error');
+                }
+                
+                const percent = Math.round(((i + 1) / total) * 100);
+                progressBar.style.width = percent + '%';
+                progressPercent.textContent = percent + '%';
+            }
+            
+            showResult(uploaded, failed, total);
+        });
+
+        function showResult(uploaded, failed, total) {
+            progressSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+            
+            const resultIcon = document.getElementById('result-icon');
+            const resultTitle = document.getElementById('result-title');
+            const resultMessage = document.getElementById('result-message');
+            const resultLink = document.getElementById('result-link');
+            
+            if (failed === 0) {
+                resultIcon.innerHTML = `
+                    <div class="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                `;
+                resultTitle.textContent = 'Успешно!';
+                resultTitle.className = 'text-xl font-bold text-center mb-2 text-green-400';
+                resultMessage.textContent = `Загружено ${uploaded} файлов`;
+            } else if (uploaded > 0) {
+                resultIcon.innerHTML = `
+                    <div class="w-20 h-20 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                `;
+                resultTitle.textContent = 'Частично загружено';
+                resultTitle.className = 'text-xl font-bold text-center mb-2 text-yellow-400';
+                resultMessage.textContent = `Успешно: ${uploaded}, Ошибки: ${failed}`;
+            } else {
+                resultIcon.innerHTML = `
+                    <div class="w-20 h-20 mx-auto bg-red-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </div>
+                `;
+                resultTitle.textContent = 'Ошибка';
+                resultTitle.className = 'text-xl font-bold text-center mb-2 text-red-400';
+                resultMessage.textContent = 'Проверьте токен и настройки';
+            }
+            
+            resultLink.href = `https://github.com/${settings.owner}/${settings.repo}`;
+            resultLink.classList.toggle('hidden', failed === total);
+            
+            uploadBtn.disabled = false;
+            uploadText.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Загрузить на GitHub
+            `;
+        }
+
+        document.getElementById('new-upload-btn').addEventListener('click', () => {
+            selectedFiles = [];
+            filesInput.value = '';
+            updateFilesUI();
+            resultSection.classList.add('hidden');
+            progressSection.classList.add('hidden');
+        });
+
+        loadSettings();
+        updateUploadButton();
+        
+        console.log('GitHub Uploader initialized');
+    </script>
+</body>
+</html>
